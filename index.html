@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>گاڑی اور ڈرائیور کا حساب</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f7f6; direction: rtl; }
+        .container { max-width: 750px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-submit { width: 100%; padding: 10px; background: #28a745; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        .btn-submit:hover { background: #218838; }
+        
+        /* Search Box Style */
+        .search-box { margin-top: 25px; margin-bottom: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; }
+        .search-box input { border: 1px solid #007bff; }
+
+        table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #007bff; color: white; }
+        .total { font-weight: bold; background: #e9ecef; }
+        .btn-edit { background: #ffc107; color: #000; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .btn-delete { background: #dc3545; color: #fff; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>گاڑی کا حساب کتاب</h2>
+    
+    <input type="hidden" id="editIndex" value="-1">
+
+    <div class="form-group">
+        <label>گاڑی کا نمبر/نام:</label>
+        <input type="text" id="fVehicle" placeholder="مثلاً: LEB-1234">
+    </div>
+    
+    <div class="form-group">
+        <label>ڈرائیور کا نام:</label>
+        <input type="text" id="fDriver" placeholder="مثلاً: علی">
+    </div>
+
+    <div class="form-group">
+        <label>زمرہ (Category):</label>
+        <select id="fCategory">
+            <option value="">منتخب کریں</option>
+            <option value="Fuel">فول (Fuel)</option>
+            <option value="Advance">ادھار / ایڈوانس</option>
+            <option value="Repair">مرمت (Repair)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>رقم (Amount):</label>
+        <input type="number" id="fAmount" placeholder="0">
+    </div>
+
+    <div class="form-group">
+        <label>تاریخ:</label>
+        <input type="date" id="fDate">
+    </div>
+
+    <button id="mainBtn" class="btn-submit" onclick="saveRecord()">اندراج کریں</button>
+
+    <!-- Search Section -->
+    <div class="search-box">
+        <label>ریکارڈ تلاش کریں (ڈرائیور یا گاڑی کا نام):</label>
+        <input type="text" id="searchInput" onkeyup="displayRecords()" placeholder="سرچ کرنے کے لیے نام لکھیں...">
+    </div>
+
+    <h3>سابقہ ریکارڈ</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>گاڑی</th>
+                <th>ڈرائیور</th>
+                <th>تفصیل</th>
+                <th>رقم</th>
+                <th>ایکشن</th>
+            </tr>
+        </thead>
+        <tbody id="recordsTable"></tbody>
+        <tfoot>
+            <tr class="total">
+                <td colspan="3">کل رقم (Total)</td>
+                <td id="totalAmount" colspan="2">0</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<script>
+    window.onload = displayRecords;
+
+    function saveRecord() {
+        const vehicle = document.getElementById('fVehicle').value;
+        const driver = document.getElementById('fDriver').value;
+        const category = document.getElementById('fCategory').value;
+        const amount = parseFloat(document.getElementById('fAmount').value);
+        const date = document.getElementById('fDate').value;
+        const editIndex = parseInt(document.getElementById('editIndex').value);
+
+        if (!vehicle) return alert("براہِ کرم گاڑی کا انتخاب کریں");
+        if (!driver) return alert("براہِ کرم ڈرائیور کا انتخاب کریں");
+        if (!category) return alert("براہِ کرم زمرہ منتخب کریں");
+        if (!amount || amount <= 0) return alert("براہِ کرم درست رقم درج کریں");
+        if (!date) return alert("تاریخ کا انتخاب لازمی ہے");
+
+        const record = { vehicle, driver, category, amount, date };
+        let records = JSON.parse(localStorage.getItem('gariHisab')) || [];
+
+        if (editIndex === -1) {
+            records.push(record);
+            alert("اندراج ہو گیا ہے!");
+        } else {
+            records[editIndex] = record;
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('mainBtn').innerText = "اندراج کریں";
+            document.getElementById('mainBtn').style.background = "#28a745";
+            alert("ریکارڈ اپ ڈیٹ ہو گیا ہے!");
+        }
+
+        localStorage.setItem('gariHisab', JSON.stringify(records));
+        clearInputs();
+        displayRecords();
+    }
+
+    function displayRecords() {
+        let records = JSON.parse(localStorage.getItem('gariHisab')) || [];
+        let tableBody = document.getElementById('recordsTable');
+        let totalElement = document.getElementById('totalAmount');
+        let filter = document.getElementById('searchInput').value.toLowerCase();
+        
+        tableBody.innerHTML = '';
+        let total = 0;
+
+        records.forEach((r, index) => {
+            // Filter Logic (Search by Driver or Vehicle)
+            if (r.driver.toLowerCase().includes(filter) || r.vehicle.toLowerCase().includes(filter)) {
+                total += r.amount;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${r.vehicle}</td>
+                        <td>${r.driver}</td>
+                        <td>${r.category} (${r.date})</td>
+                        <td>${r.amount}</td>
+                        <td>
+                            <button class="btn-edit" onclick="editRecord(${index})">ایڈٹ</button>
+                            <button class="btn-delete" onclick="deleteRecord(${index})">ڈیلیٹ</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        totalElement.innerText = total;
+    }
+
+    function editRecord(index) {
+        let records = JSON.parse(localStorage.getItem('gariHisab')) || [];
+        const item = records[index];
+
+        document.getElementById('fVehicle').value = item.vehicle;
+        document.getElementById('fDriver').value = item.driver;
+        document.getElementById('fCategory').value = item.category;
+        document.getElementById('fAmount').value = item.amount;
+        document.getElementById('fDate').value = item.date;
+
+        document.getElementById('editIndex').value = index;
+        document.getElementById('mainBtn').innerText = "اپ ڈیٹ کریں";
+        document.getElementById('mainBtn').style.background = "#ffc107";
+    }
+
+    function deleteRecord(index) {
+        if (confirm("کیا آپ واقعی یہ ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟")) {
+            let records = JSON.parse(localStorage.getItem('gariHisab')) || [];
+            records.splice(index, 1);
+            localStorage.setItem('gariHisab', JSON.stringify(records));
+            displayRecords();
+        }
+    }
+
+    function clearInputs() {
+        document.getElementById('fVehicle').value = '';
+        document.getElementById('fDriver').value = '';
+        document.getElementById('fCategory').value = '';
+        document.getElementById('fAmount').value = '';
+        document.getElementById('fDate').value = '';
+        document.getElementById('editIndex').value = "-1";
+    }
+</script>
+
+</body>
+</html>
